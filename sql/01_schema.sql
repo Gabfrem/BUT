@@ -45,10 +45,15 @@ create table if not exists public.sheets (
   tags        text[] not null default '{}',
   taken_on    date not null default current_date,     -- date du cours
   starred     boolean not null default false,
+  unfinished  boolean not null default false,         -- feuille commencée, à compléter
   ocr_text    text,                                   -- réservé (OCR éventuel plus tard)
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- Colonnes ajoutées après coup : « create table if not exists » ne les crée pas
+-- sur une base déjà en place, d'où ces alter explicites.
+alter table public.sheets add column if not exists unfinished boolean not null default false;
 create index if not exists sheets_user_idx    on public.sheets (user_id, taken_on desc, created_at desc);
 create index if not exists sheets_subject_idx on public.sheets (subject_id, taken_on desc);
 create index if not exists sheets_chapter_idx on public.sheets (chapter_id, taken_on desc);
@@ -193,3 +198,7 @@ grant select, insert, update, delete on
 grant select on
   public.subject_overview, public.chapter_overview, public.sheet_overview
   to authenticated;
+
+-- Retrouver vite les feuilles laissées en plan
+create index if not exists sheets_unfinished_idx
+  on public.sheets (user_id, unfinished) where unfinished;

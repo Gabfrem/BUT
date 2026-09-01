@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { el, esc, dateLong, hhmm, toDay, colorFor, errMsg, toast } from '../ui.js';
 import * as db from '../db.js';
 import { state } from '../state.js';
-import { eventsOfDay, matchSubject, prettySummary } from '../ics.js';
+import { eventsOfDay, matchSubject, prettySummary, sessionType } from '../ics.js';
 import { sheetGrid, emptyState } from '../components.js';
 
 export async function render() {
@@ -72,14 +72,19 @@ export async function render() {
       const past = end < now;
       const subject = matchSubject(ev.summary, state.subjects);
       const color = subject?.color || colorFor(ev.summary);
+      // Quand la matière est reconnue, son nom est bien plus lisible que le
+      // libellé brut du planning (codes internes, majuscules, sans accents).
+      const titre = subject?.name || prettySummary(ev.summary);
+      const sousTitre = [sessionType(ev.summary), ev.location, subject?.code]
+        .filter(Boolean).join(' · ') || '—';
       const item = el(`
         <button class="edt-item ${live ? 'now' : ''} ${past ? 'past' : ''}"
                 data-subject="${esc(subject?.id || '')}">
           <span class="when">${esc(hhmm(start))}<span class="end">${esc(hhmm(end))}</span></span>
           <span class="rule" style="background:${esc(color)}"></span>
           <span class="body">
-            <span class="ttl">${esc(prettySummary(ev.summary))}</span>
-            <span class="sub">${esc([ev.location, subject?.code].filter(Boolean).join(' · ') || '—')}</span>
+            <span class="ttl">${esc(titre)}</span>
+            <span class="sub">${esc(sousTitre)}</span>
           </span>
           ${live ? '<span class="live">en cours</span>' : `<span class="chev">${icon('camera')}</span>`}
         </button>`);
@@ -114,16 +119,20 @@ export async function render() {
     </div>`);
   root.appendChild(recent);
 
-  /* ------------------------------------------------------------ à ranger */
+  /* --------------------------------------------------- à terminer / à ranger */
+  const unfinished = el('<div class="section" data-unfinished></div>');
+  root.appendChild(unfinished);
+
   const unfiled = el('<div class="section" data-unfiled></div>');
   root.appendChild(unfiled);
 
   /* -------------------------------------------------- chargement asynchrone */
   (async () => {
     try {
-      const [derniers, aRanger] = await Promise.all([
+      const [derniers, aRanger, aFinir] = await Promise.all([
         db.listSheets({ limit: 12 }),
-        db.listSheets({ unfiled: true, limit: 12 })
+        db.listSheets({ unfiled: true, limit: 12 }),
+        db.listSheets({ unfinished: true, limit: 12 })
       ]);
 
       const slot = recent.querySelector('[data-slot]');
@@ -137,6 +146,15 @@ export async function render() {
           text: 'Scanne ta première feuille en rentrant de cours : elle apparaîtra ici.',
           action: { label: 'Scanner', icon: 'camera', onClick: () => { location.hash = '#/scan'; } }
         }));
+      }
+
+      if (aFinir.length) {
+        unfinished.innerHTML = `
+          <div class="section-head">
+            <h2>À terminer</h2>
+            <a class="link" href="#/recherche?finir=1">Tout voir ${icon('chevronR')}</a>
+          </div>`;
+        unfinished.appendChild(sheetGrid(aFinir, { horizontal: true }));
       }
 
       if (aRanger.length) {

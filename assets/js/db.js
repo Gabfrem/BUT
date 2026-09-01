@@ -71,6 +71,7 @@ export async function listSheets(f = {}) {
   if (f.noChapter)  q = q.is('chapter_id', null);
   if (f.unfiled)    q = q.is('subject_id', null);
   if (f.starred)    q = q.eq('starred', true);
+  if (f.unfinished) q = q.eq('unfinished', true);
   if (f.from)       q = q.gte('taken_on', f.from);
   if (f.to)         q = q.lte('taken_on', f.to);
   q = q.order('taken_on', { ascending: false }).order('created_at', { ascending: false });
@@ -103,7 +104,8 @@ export async function deleteSheet(id) {
 
 export async function countSheets(filter = {}) {
   let q = sb().from('sheets').select('id', { count: 'exact', head: true });
-  if (filter.unfiled) q = q.is('subject_id', null);
+  if (filter.unfiled)    q = q.is('subject_id', null);
+  if (filter.unfinished) q = q.eq('unfinished', true);
   const { count, error } = await q;
   if (error) throw new Error(error.message);
   return count ?? 0;
