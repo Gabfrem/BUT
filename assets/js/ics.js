@@ -180,6 +180,24 @@ export function eventsBetween(events, fromStr, toStr) {
     .sort((a, b) => a.start.localeCompare(b.start));
 }
 
+/**
+ * Jusqu'à quand l'emploi du temps en cache va-t-il ?
+ * Un export ICS couvre une période finie (souvent un semestre) : passé sa
+ * dernière date, l'accueil se viderait sans explication.
+ * @returns {{fin:Date, joursRestants:number}|null}
+ */
+export function couverture(events) {
+  if (!events?.length) return null;
+  const fin = events.reduce((max, e) => {
+    const d = new Date(e.end || e.start);
+    return d > max ? d : max;
+  }, new Date(0));
+  if (isNaN(fin) || fin.getTime() === 0) return null;
+  const aujourdhui = new Date();
+  aujourdhui.setHours(0, 0, 0, 0);
+  return { fin, joursRestants: Math.ceil((fin - aujourdhui) / 86400000) };
+}
+
 /** Le cours en cours à l'instant t, sinon le prochain de la journée. */
 export function currentEvent(events, now = new Date()) {
   const list = (events || []).map((e) => ({ ...e, s: new Date(e.start), e2: new Date(e.end) }));
