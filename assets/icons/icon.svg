@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Carnet">
+  <rect width="512" height="512" rx="112" fill="#5b5bd6"/>
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M136 150a34 34 0 0 1 34-34h180a18 18 0 0 1 18 18v226"/>
+    <path d="M136 150v212a34 34 0 0 0 34 34h198"/>
+    <path d="M196 186h124M196 246h124M196 306h78"/>
+  </g>
+</svg>

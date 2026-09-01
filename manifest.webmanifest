@@ -1,0 +1,39 @@
+{
+  "name": "Carnet — mes feuilles de cours",
+  "short_name": "Carnet",
+  "description": "Scanner ses feuilles de cours et les retrouver par matière et par chapitre.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0e1017",
+  "theme_color": "#5b5bd6",
+  "icons": [
+    {
+      "src": "./assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scanner une feuille",
+      "short_name": "Scanner",
+      "url": "./#/scan"
+    },
+    {
+      "name": "Mes matières",
+      "short_name": "Matières",
+      "url": "./#/matieres"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+# Système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+
+# Supabase CLI (si tu l'utilises un jour)
+supabase/.branches/
+supabase/.temp/
+.env
+.env.*
+
+# Exports locaux
+carnet-*.json
