@@ -170,13 +170,37 @@ pré-sélectionner la bonne matière au moment du scan.
 | Scanner une feuille | bouton central de la barre du bas |
 | Ranger a posteriori | fiche de la feuille → **Ranger** |
 | Créer un chapitre | dans la pop-up de rangement, ou fiche matière → **+** |
-| Retrouver une feuille | **Chercher** (titre, mot-clé, matière, chapitre) |
+| Retrouver une feuille | **Chercher** (titre, mot-clé, matière, chapitre, texte transcrit) |
 | Marquer l'essentiel | étoile sur la fiche → onglet **Favoris** |
-| Ce qui traîne | **Matières → À ranger** |
+| Signaler une feuille inachevée | case « pas terminée » au rangement, ou bouton **À terminer** |
+| Ce qui traîne | **Matières → À ranger** et **À terminer** |
+| Lire une feuille en texte | bouton **Texte** sur la fiche, ou au survol d'une vignette |
 
 Les filtres de scan : **Document** (par défaut, noir et blanc contrasté, idéal
 pour du manuscrit), **Niveaux de gris**, **Couleur** (pour un schéma au
 surligneur), **Photo brute**.
+
+### Transcription en texte
+
+Le bouton **Texte** convertit les images d'une feuille en texte, dans le
+navigateur, via Tesseract.js. À savoir avant de s'en servir :
+
+- **La qualité dépend énormément de l'écriture.** Le moteur est excellent sur un
+  polycopié imprimé, correct sur une écriture bien détachée, et mauvais sur de
+  la cursive rapide — c'est un moteur conçu pour des caractères typographiques.
+- **Le résultat est un brouillon modifiable.** C'est le texte que tu corriges
+  qui est enregistré, pas la sortie brute. Même partiellement corrigé, il
+  devient cherchable : il alimente `sheets.ocr_text`, indexé en plein texte.
+- **Premier lancement plus long.** La bibliothèque et le modèle de langue
+  français (~6 Mo) se téléchargent depuis un CDN à la première utilisation, puis
+  restent dans le cache du navigateur. Ensuite, comptez environ une seconde par
+  page. C'est la seule dépendance réseau externe de l'application, et elle ne
+  se charge que si tu cliques sur ce bouton.
+
+Si un jour la qualité sur ton écriture ne te suffit pas, la bascule vers un
+modèle de vision (transcription bien meilleure sur du manuscrit, via une Edge
+Function qui garde la clé d'API hors du front) ne demanderait pas de changer le
+schéma : la colonne `ocr_text` et son index sont déjà en place.
 
 ---
 
@@ -193,6 +217,7 @@ assets/js/
   supa.js  db.js  state.js connexion, requêtes, cache mémoire
   imaging.js  cropper.js   traitement des photos, recadrage
   ics.js                   lecture de l'emploi du temps
+  ocr.js  transcription.js transcription des pages en texte
   components.js            grille de feuilles, pop-up de rangement
   seed.js                  matières du BUT 1 (pré-remplissage)
   views/                   une page par fichier

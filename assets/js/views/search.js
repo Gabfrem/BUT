@@ -64,7 +64,7 @@ export async function render(params = {}) {
       if (!mots.length) return true;
       const foin = sansAccents([
         s.title, s.note, (s.tags || []).join(' '),
-        s.subject_name, s.subject_code, s.chapter_name, s.taken_on
+        s.subject_name, s.subject_code, s.chapter_name, s.taken_on, s.ocr_text
       ].filter(Boolean).join(' '));
       return mots.every((m) => foin.includes(m));
     });

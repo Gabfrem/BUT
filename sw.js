@@ -2,7 +2,7 @@
  * les données et les images viennent toujours de Supabase).
  * Change CACHE à chaque déploiement pour forcer la mise à jour. */
 
-const CACHE = 'carnet-v1';
+const CACHE = 'carnet-v2';
 
 const COQUILLE = [
   './',
@@ -23,6 +23,8 @@ const COQUILLE = [
   './assets/js/cropper.js',
   './assets/js/components.js',
   './assets/js/seed.js',
+  './assets/js/ocr.js',
+  './assets/js/transcription.js',
   './assets/js/views/home.js',
   './assets/js/views/scan.js',
   './assets/js/views/library.js',

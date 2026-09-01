@@ -398,6 +398,24 @@ a.chip { text-decoration: none; }
   color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .02em;
   text-transform: uppercase; padding: 12px 8px 5px; text-align: center;
 }
+/* Bouton « texte » révélé au survol de la vignette (ordinateur).
+   Sur mobile, où le survol n'existe pas, il reste visible en petit. */
+.sheet-card .ocr-btn {
+  position: absolute; right: 6px; bottom: 6px;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px; border-radius: 999px;
+  background: rgba(8, 10, 18, .78); color: #fff;
+  font-size: .7rem; font-weight: 600; backdrop-filter: blur(4px);
+  opacity: .82; transition: opacity .12s, transform .12s;
+}
+.sheet-card .ocr-btn svg { width: 13px; height: 13px; }
+.sheet-card .ocr-btn:hover { opacity: 1; transform: translateY(-1px); }
+@media (hover: hover) and (min-width: 900px) {
+  .sheet-card .ocr-btn { opacity: 0; }
+  .sheet-card:hover .ocr-btn,
+  .sheet-card .ocr-btn:focus-visible { opacity: 1; }
+}
+
 .sheet-card .meta { padding: 9px 10px 11px; }
 .sheet-card .meta .ttl {
   font-size: .86rem; font-weight: 600; line-height: 1.3;

@@ -6,6 +6,7 @@ import { el, esc, toast, errMsg, dateLong, dateRelative, colorFor,
 import * as db from '../db.js';
 import { state } from '../state.js';
 import { openFiler } from '../components.js';
+import { openTranscription } from '../transcription.js';
 import { loadImage, process } from '../imaging.js';
 
 export async function render(params) {
@@ -52,12 +53,14 @@ export async function render(params) {
       <button class="btn" data-star>${feuille.starred ? iconStarFilled() : icon('star')}
         <span>${feuille.starred ? 'Favori' : 'Marquer'}</span></button>
       <button class="btn" data-todo></button>
+      <button class="btn" data-ocr>${icon('file')}<span>Texte</span></button>
       <button class="btn" data-file>${icon('folder')}<span>Ranger</span></button>
       <button class="btn" data-add>${icon('plus')}<span>Page</span></button>
       <button class="btn danger" data-del>${icon('trash')}<span>Supprimer</span></button>
     </div>
 
     <div class="progress hidden" data-progress style="margin-bottom:12px"><i></i></div>
+    <div data-texte style="margin-bottom:18px"></div>
     <div data-pages class="list"></div>
     <input type="file" accept="image/*" capture="environment" class="sr-only" data-input>`;
 
@@ -141,6 +144,30 @@ export async function render(params) {
   });
 
   dessinerTodo();
+
+  /* ------------------------------------------------------- texte transcrit */
+  const zoneTexte = root.querySelector('[data-texte]');
+
+  function dessinerTexte() {
+    if (!feuille.ocr_text) { zoneTexte.innerHTML = ''; return; }
+    zoneTexte.innerHTML = `
+      <details class="card pad" open>
+        <summary style="cursor:pointer;font-weight:600;font-size:.92rem;
+                 display:flex;align-items:center;gap:8px">
+          ${icon('file')} Texte de la feuille
+        </summary>
+        <div style="white-space:pre-wrap;font-size:.92rem;line-height:1.65;
+             color:var(--txt-2);margin-top:12px">${esc(feuille.ocr_text)}</div>
+      </details>`;
+  }
+
+  root.querySelector('[data-ocr]').addEventListener('click', () => {
+    openTranscription(feuille, {
+      onSaved: (t) => { feuille.ocr_text = t; dessinerTexte(); }
+    });
+  });
+
+  dessinerTexte();
 
   /* -------------------------------------------------------------- actions */
   root.querySelector('[data-star]').addEventListener('click', async (e) => {

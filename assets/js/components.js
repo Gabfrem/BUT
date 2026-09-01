@@ -21,6 +21,10 @@ export function sheetCardHtml(s) {
         ${s.page_count > 1 ? `<span class="badge">${s.page_count} p.</span>` : ''}
         ${s.starred ? `<span class="star">${iconStarFilled()}</span>` : ''}
         ${s.unfinished ? '<span class="todo">à terminer</span>' : ''}
+        <span class="ocr-btn" data-ocr="${esc(s.id)}" role="button" tabindex="0"
+              title="${s.ocr_text ? 'Lire le texte' : 'Transcrire en texte'}">
+          ${icon('file')}<span>${s.ocr_text ? 'Texte' : 'Transcrire'}</span>
+        </span>
       </div>
       <div class="meta">
         <div class="bar" style="background:${esc(color)}"></div>
@@ -59,7 +63,23 @@ export async function hydrateThumbs(root) {
 export function sheetGrid(sheets, { horizontal = false, onOpen } = {}) {
   const wrap = el(`<div class="${horizontal ? 'hscroll' : 'sheet-grid'}"></div>`);
   wrap.innerHTML = sheets.map(sheetCardHtml).join('');
-  wrap.addEventListener('click', (e) => {
+  wrap.addEventListener('click', async (e) => {
+    // Le bouton « texte » ne doit pas ouvrir la feuille derrière lui.
+    const ocr = e.target.closest('[data-ocr]');
+    if (ocr) {
+      e.preventDefault();
+      e.stopPropagation();
+      const feuille = sheets.find((s) => s.id === ocr.dataset.ocr);
+      if (!feuille) return;
+      const { openTranscription } = await import('./transcription.js');
+      openTranscription(feuille, {
+        onSaved: (t) => {
+          feuille.ocr_text = t;
+          ocr.querySelector('span').textContent = t ? 'Texte' : 'Transcrire';
+        }
+      });
+      return;
+    }
     const card = e.target.closest('[data-sheet]');
     if (!card) return;
     if (onOpen) onOpen(card.dataset.sheet);
