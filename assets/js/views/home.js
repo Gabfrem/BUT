@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { el, esc, dateLong, hhmm, toDay, colorFor, errMsg, toast } from '../ui.js';
 import * as db from '../db.js';
 import { state } from '../state.js';
-import { eventsOfDay, matchSubject, prettySummary, sessionType } from '../ics.js';
+import { eventsOfDay, matchSubject, sessionType, eventLabel } from '../ics.js';
 import { sheetGrid, emptyState } from '../components.js';
 
 export async function render() {
@@ -74,7 +74,7 @@ export async function render() {
       const color = subject?.color || colorFor(ev.summary);
       // Quand la matière est reconnue, son nom est bien plus lisible que le
       // libellé brut du planning (codes internes, majuscules, sans accents).
-      const titre = subject?.name || prettySummary(ev.summary);
+      const titre = eventLabel(ev, subject);
       const sousTitre = [sessionType(ev.summary), ev.location, subject?.code]
         .filter(Boolean).join(' · ') || '—';
       const item = el(`

@@ -150,8 +150,12 @@ $rls$;
 
 -- ============================================================================
 --  VUES pratiques (security_invoker => la RLS des tables s'applique)
+--  Supprimées puis recréées : une vue fige la liste des colonnes de « f.* » à
+--  sa création, donc une colonne ajoutée plus tard à la table resterait
+--  invisible, et « create or replace » refuse un changement d'ordre de colonnes.
 -- ============================================================================
-create or replace view public.subject_overview
+drop view if exists public.subject_overview;
+create view public.subject_overview
 with (security_invoker = true) as
 select
   s.*,
@@ -160,7 +164,8 @@ select
   (select max(f.taken_on) from public.sheets f where f.subject_id = s.id) as last_sheet_on
 from public.subjects s;
 
-create or replace view public.chapter_overview
+drop view if exists public.chapter_overview;
+create view public.chapter_overview
 with (security_invoker = true) as
 select
   c.*,
@@ -168,7 +173,8 @@ select
   (select max(f.taken_on) from public.sheets f where f.chapter_id = c.id) as last_sheet_on
 from public.chapters c;
 
-create or replace view public.sheet_overview
+drop view if exists public.sheet_overview;
+create view public.sheet_overview
 with (security_invoker = true) as
 select
   f.*,

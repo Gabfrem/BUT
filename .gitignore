@@ -16,3 +16,6 @@ supabase/.temp/
 
 # Exports locaux
 carnet-*.json
+
+# Fichiers de test temporaires
+_test*
