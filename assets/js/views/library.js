@@ -38,6 +38,12 @@ export async function render() {
         <span class="sub">les feuilles marquées d'une étoile</span></span>
       <span class="chev">${icon('chevronR')}</span>
     </a>
+    <a class="row-item hidden" href="#/recherche?finir=1" data-unfinished>
+      <span class="swatch" style="background:var(--warn-2);color:var(--warn)">${icon('clock')}</span>
+      <span class="grow"><span class="ttl">À terminer</span>
+        <span class="sub" data-unfinished-sub></span></span>
+      <span class="chev">${icon('chevronR')}</span>
+    </a>
     <a class="row-item hidden" href="#/recherche?aranger=1" data-unfiled>
       <span class="swatch" style="background:var(--warn-2);color:var(--warn)">${icon('inbox')}</span>
       <span class="grow"><span class="ttl">À ranger</span>
@@ -51,6 +57,14 @@ export async function render() {
     row.classList.remove('hidden');
     row.querySelector('[data-unfiled-sub]').textContent =
       `${n} feuille${n > 1 ? 's' : ''} sans matière`;
+  }).catch(() => {});
+
+  db.countSheets({ unfinished: true }).then((n) => {
+    if (!n) return;
+    const row = quick.querySelector('[data-unfinished]');
+    row.classList.remove('hidden');
+    row.querySelector('[data-unfinished-sub]').textContent =
+      `${n} feuille${n > 1 ? 's' : ''} à compléter`;
   }).catch(() => {});
 
   /* ------------------------------------------------------------- matières */

@@ -46,9 +46,12 @@ export async function render(params) {
         ${feuille.tags.map((t) => `<a class="chip accent" href="#/recherche?q=${encodeURIComponent(t)}">
            ${icon('tag')}${esc(t)}</a>`).join('')}</div>` : ''}
 
+    <div data-unfinished-banner></div>
+
     <div class="btn-row" style="margin-bottom:18px">
       <button class="btn" data-star>${feuille.starred ? iconStarFilled() : icon('star')}
         <span>${feuille.starred ? 'Favori' : 'Marquer'}</span></button>
+      <button class="btn" data-todo></button>
       <button class="btn" data-file>${icon('folder')}<span>Ranger</span></button>
       <button class="btn" data-add>${icon('plus')}<span>Page</span></button>
       <button class="btn danger" data-del>${icon('trash')}<span>Supprimer</span></button>
@@ -110,6 +113,35 @@ export async function render(params) {
     if (carte) ouvrirVisionneuse(Number(carte.dataset.page));
   });
 
+  /* --------------------------------------------------- « pas terminée »   */
+  const banniere = root.querySelector('[data-unfinished-banner]');
+  const boutonTodo = root.querySelector('[data-todo]');
+
+  function dessinerTodo() {
+    boutonTodo.innerHTML = feuille.unfinished
+      ? `${icon('check')}<span>Terminée</span>`
+      : `${icon('clock')}<span>À terminer</span>`;
+    boutonTodo.classList.toggle('warn', !!feuille.unfinished);
+    banniere.innerHTML = feuille.unfinished
+      ? `<div class="banner" style="margin-bottom:16px">${icon('clock')}
+           <div class="grow">Feuille <strong>pas terminée</strong> — il reste à la compléter.</div>
+         </div>`
+      : '';
+  }
+
+  boutonTodo.addEventListener('click', async () => {
+    boutonTodo.disabled = true;
+    try {
+      const maj = await db.updateSheet(feuille.id, { unfinished: !feuille.unfinished });
+      feuille.unfinished = maj.unfinished;
+      dessinerTodo();
+      toast(feuille.unfinished ? 'Marquée comme non terminée' : 'Marquée comme terminée');
+    } catch (err) { toast(errMsg(err), 'err'); }
+    boutonTodo.disabled = false;
+  });
+
+  dessinerTodo();
+
   /* -------------------------------------------------------------- actions */
   root.querySelector('[data-star]').addEventListener('click', async (e) => {
     const b = e.currentTarget;
@@ -129,7 +161,7 @@ export async function render(params) {
       initial: {
         subject_id: feuille.subject_id, chapter_id: feuille.chapter_id,
         title: feuille.title, taken_on: feuille.taken_on,
-        tags: feuille.tags, note: feuille.note
+        tags: feuille.tags, note: feuille.note, unfinished: feuille.unfinished
       }
     });
     if (!meta) return;

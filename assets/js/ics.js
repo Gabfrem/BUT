@@ -234,9 +234,29 @@ export function matchSubject(summary, subjects) {
   return bestScore >= 0.5 ? best : null;
 }
 
-/** Intitulé nettoyé pour l'affichage (retire le code redondant). */
+/**
+ * Intitulé nettoyé pour l'affichage.
+ * Les plannings universitaires produisent des libellés du genre
+ *   « INFFIS01R1.04 INTRODUCTION AUX BASES DE DONNEES (T3BUTINFFIS01R1.04) »
+ * dont seul le milieu intéresse un humain.
+ */
 export function prettySummary(summary) {
-  return String(summary || '')
-    .replace(/^\s*(R\d\.?\d{2}|SA[EÉ]\s*\d\.?\d{2})\s*[-–—:]?\s*/i, '')
-    .trim() || summary;
+  let s = String(summary || '')
+    .replace(/\([^)]*\)/g, ' ')                                   // codes entre parenthèses
+    .replace(/\b[A-Z0-9]*(?:R\d\.?\d{2}|SA[EÉ]\s?\d\.?\d{2})\b/gi, ' ')  // codes de ressource
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s\-–—:.]+|[\s\-–—:.]+$/g, '')
+    .trim();
+  // Beaucoup de plannings crient en majuscules : on redescend en casse normale.
+  if (s && s === s.toUpperCase() && s.length > 4) {
+    s = s.charAt(0) + s.slice(1).toLowerCase();
+  }
+  return s || summary;
+}
+
+/** Type de séance repéré dans l'intitulé : CM, TD, TP… */
+export function sessionType(summary) {
+  const m = norm(summary).match(/\b(CM|TD|TP|DS|EXAMEN|PROJET|SOUTENANCE)\b/);
+  if (!m) return null;
+  return m[1].length <= 2 ? m[1] : m[1].charAt(0) + m[1].slice(1).toLowerCase();
 }

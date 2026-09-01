@@ -3,7 +3,7 @@
 import { icon } from '../icons.js';
 import { el, esc, dateLong, hhmm, toDay, colorFor, toast, errMsg } from '../ui.js';
 import { state } from '../state.js';
-import { eventsOfDay, matchSubject, prettySummary } from '../ics.js';
+import { eventsOfDay, matchSubject, prettySummary, sessionType } from '../ics.js';
 import { synchroniserEdt } from './settings.js';
 
 export async function render() {
@@ -72,8 +72,9 @@ export async function render() {
             <span class="when">${esc(hhmm(s))}<span class="end">${esc(hhmm(e))}</span></span>
             <span class="rule" style="background:${esc(matiere?.color || colorFor(ev.summary))}"></span>
             <span class="body">
-              <span class="ttl">${esc(prettySummary(ev.summary))}</span>
-              <span class="sub">${esc([ev.location, matiere?.code].filter(Boolean).join(' · ') || '—')}</span>
+              <span class="ttl">${esc(matiere?.name || prettySummary(ev.summary))}</span>
+              <span class="sub">${esc([sessionType(ev.summary), ev.location, matiere?.code]
+                .filter(Boolean).join(' · ') || '—')}</span>
             </span>
             <span class="chev">${icon('camera')}</span>
           </button>`);

@@ -252,7 +252,8 @@ export async function render(params = {}) {
         title: meta.title || titreAuto,
         note: meta.note,
         tags: meta.tags,
-        taken_on: meta.taken_on
+        taken_on: meta.taken_on,
+        unfinished: meta.unfinished
       });
       avance(0.08);
 

@@ -18,11 +18,13 @@ export async function render(params = {}) {
   let matiere = params.matiere || '';
   let favoris = params.favoris === '1';
   let aRanger = params.aranger === '1';
+  let aFinir  = params.finir === '1';
 
   const root = el(`
     <div>
       <div class="section-head" style="margin-bottom:12px">
-        <h1>${esc(favoris ? 'Favoris' : aRanger ? 'À ranger' : 'Toutes les feuilles')}</h1>
+        <h1>${esc(favoris ? 'Favoris' : aRanger ? 'À ranger'
+                  : aFinir ? 'À terminer' : 'Toutes les feuilles')}</h1>
       </div>
 
       <div class="searchbar">
@@ -40,6 +42,7 @@ export async function render(params = {}) {
         </select>
         <button data-f="favoris" class="${favoris ? 'on' : ''}">Favoris</button>
         <button data-f="aranger" class="${aRanger ? 'on' : ''}">À ranger</button>
+        <button data-f="finir"   class="${aFinir ? 'on' : ''}">À terminer</button>
       </div>
 
       <div data-count class="hint" style="margin-bottom:10px"></div>
@@ -57,6 +60,7 @@ export async function render(params = {}) {
       if (matiere && s.subject_id !== matiere) return false;
       if (favoris && !s.starred) return false;
       if (aRanger && s.subject_id) return false;
+      if (aFinir && !s.unfinished) return false;
       if (!mots.length) return true;
       const foin = sansAccents([
         s.title, s.note, (s.tags || []).join(' '),
@@ -91,6 +95,7 @@ export async function render(params = {}) {
     if (matiere) p.set('matiere', matiere);
     if (favoris) p.set('favoris', '1');
     if (aRanger) p.set('aranger', '1');
+    if (aFinir)  p.set('finir', '1');
     const s = p.toString();
     history.replaceState(null, '', `#/recherche${s ? `?${s}` : ''}`);
   };
@@ -111,6 +116,7 @@ export async function render(params = {}) {
     const b = e.target.closest('[data-f]');
     if (!b) return;
     if (b.dataset.f === 'favoris') favoris = !favoris;
+    else if (b.dataset.f === 'finir') aFinir = !aFinir;
     else aRanger = !aRanger;
     b.classList.toggle('on');
     majUrl();

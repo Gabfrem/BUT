@@ -20,6 +20,7 @@ export function sheetCardHtml(s) {
         <span class="ph">${icon('image')}</span>
         ${s.page_count > 1 ? `<span class="badge">${s.page_count} p.</span>` : ''}
         ${s.starred ? `<span class="star">${iconStarFilled()}</span>` : ''}
+        ${s.unfinished ? '<span class="todo">à terminer</span>' : ''}
       </div>
       <div class="meta">
         <div class="bar" style="background:${esc(color)}"></div>
@@ -156,6 +157,11 @@ export function openFiler({
           <label>Mots-clés <span style="font-weight:400;color:var(--txt-3)">(optionnel)</span></label>
           <div data-tags></div>
         </div>
+        <label class="check-line">
+          <input type="checkbox" data-unfinished ${initial.unfinished ? 'checked' : ''}>
+          <span><strong>Feuille pas terminée</strong>
+            <span style="color:var(--txt-3)">— à compléter ou à recopier plus tard.</span></span>
+        </label>
         <div class="field" style="margin-bottom:0">
           <label>Note <span style="font-weight:400;color:var(--txt-3)">(optionnel)</span></label>
           <textarea class="textarea" data-note
@@ -256,7 +262,8 @@ export function openFiler({
               title: titleInput.value.trim() || null,
               taken_on: body.querySelector('[data-date]').value || toDay(),
               tags: tags.get(),
-              note: body.querySelector('[data-note]').value.trim() || null
+              note: body.querySelector('[data-note]').value.trim() || null,
+              unfinished: body.querySelector('[data-unfinished]').checked
             });
             close();
           }

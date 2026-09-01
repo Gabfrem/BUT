@@ -252,6 +252,8 @@ main {
 .btn.ghost:hover { background: var(--bg-3); color: var(--txt); }
 .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); background: transparent; }
 .btn.danger:hover { background: var(--danger-2); }
+.btn.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: var(--warn-2); }
+.btn.warn:hover { background: color-mix(in srgb, var(--warn) 18%, transparent); }
 .btn.block { width: 100%; }
 .btn.lg { height: 52px; font-size: 1rem; border-radius: var(--r-lg); }
 .btn.sm { height: 34px; padding: 0 11px; font-size: .84rem; border-radius: 10px; }
@@ -290,6 +292,16 @@ main {
   padding-right: 38px;
 }
 .hint { font-size: .8rem; color: var(--txt-3); margin-top: 6px; }
+
+/* Ligne « case à cocher + libellé », cible tactile confortable */
+.check-line {
+  display: flex; gap: 11px; align-items: flex-start; cursor: pointer;
+  padding: 11px 12px; margin-top: 14px;
+  border: 1px solid var(--line-2); border-radius: var(--r);
+  background: var(--bg-2); font-size: .87rem; line-height: 1.45;
+}
+.check-line:hover { border-color: var(--accent); }
+.check-line input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
 .row { display: flex; gap: 10px; }
 .row > * { flex: 1; min-width: 0; }
 
@@ -380,6 +392,12 @@ a.chip { text-decoration: none; }
 }
 .sheet-card .star { position: absolute; left: 6px; top: 6px; color: #ffca45; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
 .sheet-card .star svg { width: 17px; height: 17px; }
+.sheet-card .todo {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(transparent, rgba(180, 106, 5, .92) 55%);
+  color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .02em;
+  text-transform: uppercase; padding: 12px 8px 5px; text-align: center;
+}
 .sheet-card .meta { padding: 9px 10px 11px; }
 .sheet-card .meta .ttl {
   font-size: .86rem; font-weight: 600; line-height: 1.3;
