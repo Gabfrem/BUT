@@ -16,8 +16,8 @@
  *  écran de configuration et gardera les valeurs dans le navigateur.
  * ========================================================================== */
 window.CARNET_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  supabaseUrl: "https://oopqfkbpzvmfsmvdifzx.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vcHFma2JwenZtZnNtdmRpZnp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNzc3MDQsImV4cCI6MjEwMzg1MzcwNH0.hTp0JNzNLWameBf_8t00h_4PQJ1YH8KVoXaBNqxMMW0",
 
   /* Optionnel — URL d'une Edge Function qui relaie l'emploi du temps ICS
      (contourne le blocage CORS d'ADE). Voir supabase/functions/ics-proxy/.
