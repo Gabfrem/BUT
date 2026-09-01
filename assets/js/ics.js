@@ -180,6 +180,24 @@ export function eventsBetween(events, fromStr, toStr) {
     .sort((a, b) => a.start.localeCompare(b.start));
 }
 
+/**
+ * Jusqu'à quand l'emploi du temps en cache va-t-il ?
+ * Un export ICS couvre une période finie (souvent un semestre) : passé sa
+ * dernière date, l'accueil se viderait sans explication.
+ * @returns {{fin:Date, joursRestants:number}|null}
+ */
+export function couverture(events) {
+  if (!events?.length) return null;
+  const fin = events.reduce((max, e) => {
+    const d = new Date(e.end || e.start);
+    return d > max ? d : max;
+  }, new Date(0));
+  if (isNaN(fin) || fin.getTime() === 0) return null;
+  const aujourdhui = new Date();
+  aujourdhui.setHours(0, 0, 0, 0);
+  return { fin, joursRestants: Math.ceil((fin - aujourdhui) / 86400000) };
+}
+
 /** Le cours en cours à l'instant t, sinon le prochain de la journée. */
 export function currentEvent(events, now = new Date()) {
   const list = (events || []).map((e) => ({ ...e, s: new Date(e.start), e2: new Date(e.end) }));
@@ -244,6 +262,7 @@ export function prettySummary(summary) {
   let s = String(summary || '')
     .replace(/\([^)]*\)/g, ' ')                                   // codes entre parenthèses
     .replace(/\b[A-Z0-9]*(?:R\d\.?\d{2}|SA[EÉ]\s?\d\.?\d{2})\b/gi, ' ')  // codes de ressource
+    .replace(/^\s*(CM|TD|TP|DS|AUTO|RES)\s*[:\-–]?\s*/i, '')      // type de séance en tête
     .replace(/\s{2,}/g, ' ')
     .replace(/^[\s\-–—:.]+|[\s\-–—:.]+$/g, '')
     .trim();
@@ -254,9 +273,79 @@ export function prettySummary(summary) {
   return s || summary;
 }
 
-/** Type de séance repéré dans l'intitulé : CM, TD, TP… */
+/** Type de séance repéré dans l'intitulé : CM, TD, TP, DS… */
 export function sessionType(summary) {
-  const m = norm(summary).match(/\b(CM|TD|TP|DS|EXAMEN|PROJET|SOUTENANCE)\b/);
+  const m = norm(summary).match(/\b(CM|TD|TP|DS|AUTO|RES|EXAMEN|PROJET|SOUTENANCE)\b/);
   if (!m) return null;
-  return m[1].length <= 2 ? m[1] : m[1].charAt(0) + m[1].slice(1).toLowerCase();
+  const t = m[1];
+  const jolis = { AUTO: 'Autonomie', RES: 'Réservation', EXAMEN: 'Examen',
+                  PROJET: 'Projet', SOUTENANCE: 'Soutenance' };
+  return jolis[t] || t;
+}
+
+/**
+ * Titre à afficher pour un événement.
+ * Ordre de préférence : le nom de la matière reconnue (le plus lisible),
+ * puis le commentaire du planning (les réservations « RES » n'ont que ça :
+ * « Commentaire : +Rentrée »), puis l'intitulé nettoyé.
+ */
+export function eventLabel(ev, subject = null) {
+  if (subject?.name) return subject.name;
+  const commentaire = String(ev?.description || '')
+    .match(/Commentaire\s*:\s*\+?\s*([^\n]+)/i);
+  if (commentaire) return commentaire[1].trim();
+  return prettySummary(ev?.summary);
+}
+
+/**
+ * Liste les matières présentes dans un emploi du temps.
+ * Les intitulés ressemblent à
+ *   « CM : INFFIS01R1.01 INITIATION AU DEV. (T3BUTINFFIS01R1.01) »
+ * dont on extrait le code (R1.01) et le libellé (INITIATION AU DEV.).
+ * @returns {Array<{code:string, name:string, kind:string, semester:string|null}>}
+ */
+export function subjectsFromEvents(events) {
+  const trouvees = new Map();
+  const motif = /(R\d\.\d{2}|SA[EÉ]\s?\d\.\d{2})\s+([^(\n]+?)\s*(?:\(|$)/i;
+
+  for (const ev of events || []) {
+    const m = String(ev?.summary || '').match(motif);
+    if (!m) continue;
+    const code = m[1].toUpperCase().replace(/^SAE/, 'SAÉ').replace(/^SAÉ(\d)/, 'SAÉ $1');
+    const libelle = m[2].trim().replace(/\s{2,}/g, ' ');
+    if (!libelle) continue;
+    const cle = codeKey(code);
+    if (!trouvees.has(cle)) {
+      trouvees.set(cle, {
+        code,
+        name: casseNormale(libelle),
+        kind: /^SA/i.test(code) ? 'sae' : 'ressource',
+        semester: code.match(/(\d)\.\d{2}/) ? `S${code.match(/(\d)\.\d{2}/)[1]}` : null
+      });
+    }
+  }
+  return [...trouvees.values()].sort((a, b) => a.code.localeCompare(b.code));
+}
+
+/** Clé de comparaison entre deux codes de matière ('R1.01' ≡ 'r101'). */
+export function codeKey(code) {
+  return squash(code);
+}
+
+// Sigles à laisser en capitales quand on redescend un intitulé tout en majuscules.
+const SIGLES = new Set(['PPP', 'BD', 'BDD', 'SQL', 'IHM', 'UML', 'HTML', 'CSS', 'JS',
+  'API', 'OS', 'IP', 'IA', 'SAE', 'TP', 'TD', 'CM', 'QCM', 'RH', 'SI']);
+
+/** « INITIATION AU DEV. » -> « Initiation au dev. » ; « INTRODUCTION BD » -> « Introduction BD ». */
+function casseNormale(s) {
+  const t = String(s || '').trim();
+  if (t !== t.toUpperCase()) return t;          // déjà en casse mixte : on n'y touche pas
+  const mots = t.split(/(\s+)/).map((mot, i) => {
+    if (/^\s+$/.test(mot) || !mot) return mot;
+    const noyau = mot.replace(/[^A-ZÀ-Ÿ]/gi, '');
+    if (SIGLES.has(noyau)) return mot;          // sigle : on garde les capitales
+    const bas = mot.toLowerCase();
+    return i === 0 ? bas.charAt(0).toUpperCase() + bas.slice(1) : bas;
+  });
+  return mots.join('');
 }

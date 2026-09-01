@@ -1,5 +1,7 @@
 /* État partagé de l'application (cache mémoire des données peu changeantes). */
 import * as db from './db.js';
+import { subjectsFromEvents, codeKey } from './ics.js';
+import { PALETTE } from './ui.js';
 
 export const state = {
   user: null,
@@ -46,6 +48,33 @@ export async function chaptersFor(subjectId, { force = false } = {}) {
   const list = await db.listChapters(subjectId);
   state.chapters.set(subjectId, list);
   return list;
+}
+
+/**
+ * Crée les matières repérées dans l'emploi du temps et encore absentes.
+ * Bien plus fiable que la liste du programme national : les intitulés et la
+ * numérotation varient d'un IUT à l'autre.
+ * @returns {Promise<{crees:number, total:number, noms:string[]}>}
+ */
+export async function creerMatieresDepuisEdt() {
+  const trouvees = subjectsFromEvents(state.events);
+  const deja = new Set(state.subjects.map((s) => codeKey(s.code || s.name)));
+  const manquantes = trouvees.filter((m) => !deja.has(codeKey(m.code)));
+
+  if (manquantes.length) {
+    const base = state.subjects.length;
+    await db.createSubjects(manquantes.map((m, i) => ({
+      ...m,
+      color: PALETTE[(base + i) % PALETTE.length],
+      position: base + i
+    })));
+    await refreshSubjects();
+  }
+  return {
+    crees: manquantes.length,
+    total: trouvees.length,
+    noms: manquantes.map((m) => m.code)
+  };
 }
 
 export function invalidateChapters(subjectId) {

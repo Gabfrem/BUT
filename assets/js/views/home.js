@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { el, esc, dateLong, hhmm, toDay, colorFor, errMsg, toast } from '../ui.js';
 import * as db from '../db.js';
 import { state } from '../state.js';
-import { eventsOfDay, matchSubject, prettySummary, sessionType } from '../ics.js';
+import { eventsOfDay, matchSubject, sessionType, eventLabel, couverture } from '../ics.js';
 import { sheetGrid, emptyState } from '../components.js';
 
 export async function render() {
@@ -44,6 +44,29 @@ export async function render() {
     btn.addEventListener('click', () => { location.hash = '#/reglages'; });
     b.appendChild(btn);
     root.appendChild(b);
+  } else {
+    // Un export ICS couvre une période finie : prévenir avant qu'elle s'épuise,
+    // sinon l'accueil se viderait un matin sans explication.
+    const c = couverture(state.events);
+    if (c && c.joursRestants <= 21) {
+      const passe = c.joursRestants < 0;
+      const b = el(`
+        <div class="banner" style="margin-bottom:16px">
+          ${icon('alert')}
+          <div class="grow">
+            ${passe
+              ? `Ton emploi du temps s'arrêtait le <strong>${esc(dateLong(c.fin))}</strong> :
+                 il n'y a plus de cours à afficher.`
+              : `Ton emploi du temps se termine le <strong>${esc(dateLong(c.fin))}</strong>,
+                 dans ${c.joursRestants} jour${c.joursRestants > 1 ? 's' : ''}.`}
+            Réexporte le <code>.ics</code> depuis l'ENT pour la suite.
+          </div>
+        </div>`);
+      const btn = el('<button class="btn sm">Importer</button>');
+      btn.addEventListener('click', () => { location.hash = '#/reglages'; });
+      b.appendChild(btn);
+      root.appendChild(b);
+    }
   }
 
   /* ------------------------------------------------------ bouton principal */
@@ -74,7 +97,7 @@ export async function render() {
       const color = subject?.color || colorFor(ev.summary);
       // Quand la matière est reconnue, son nom est bien plus lisible que le
       // libellé brut du planning (codes internes, majuscules, sans accents).
-      const titre = subject?.name || prettySummary(ev.summary);
+      const titre = eventLabel(ev, subject);
       const sousTitre = [sessionType(ev.summary), ev.location, subject?.code]
         .filter(Boolean).join(' · ') || '—';
       const item = el(`

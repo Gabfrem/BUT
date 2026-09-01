@@ -2,7 +2,8 @@
 
 import { icon } from '../icons.js';
 import { el, esc, toast, errMsg, dateLong, hhmm, confirmDialog } from '../ui.js';
-import { state, prefs, setPref, patchSettings, refreshSubjects } from '../state.js';
+import { state, prefs, setPref, patchSettings, refreshSubjects,
+         creerMatieresDepuisEdt } from '../state.js';
 import { getConfig, saveConfig, signOut } from '../supa.js';
 import { fetchIcs, parseIcs } from '../ics.js';
 import { seedRows } from '../seed.js';
@@ -83,7 +84,20 @@ export async function render() {
             ${state.subjects.length
               ? `${state.subjects.length} matière${state.subjects.length > 1 ? 's' : ''} enregistrée${state.subjects.length > 1 ? 's' : ''}.`
               : 'Aucune matière pour le moment.'}
-            Pré-remplis le programme du BUT 1 — les intitulés restent modifiables.
+          </p>
+          <button class="btn primary block" data-depuis-edt ${state.events.length ? '' : 'disabled'}>
+            ${icon('calendar')}<span>Créer les matières depuis l'emploi du temps</span>
+          </button>
+          <p class="hint">
+            ${state.events.length
+              ? `La méthode la plus fiable : les codes et intitulés sont lus dans ton
+                 propre planning, donc conformes à ton IUT.`
+              : `Synchronise d'abord ton emploi du temps ci-dessus pour utiliser cette option.`}
+          </p>
+          <div class="divider"></div>
+          <p class="hint" style="margin-top:0">
+            À défaut, le programme national du BUT Informatique. Attention : la
+            numérotation varie d'un IUT à l'autre, vérifie les codes ensuite.
           </p>
           <div class="row">
             <button class="btn" data-seed="S1">Ajouter le S1</button>
@@ -209,6 +223,22 @@ export async function render() {
   });
 
   /* ---------------------------------------------------------------- matières */
+  $('[data-depuis-edt]').addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    b.disabled = true;
+    try {
+      const { crees, total, noms } = await creerMatieresDepuisEdt();
+      if (!total) {
+        toast("Aucune matière repérée dans l'emploi du temps.", 'err', 4000);
+      } else if (!crees) {
+        toast(`Les ${total} matières du planning existent déjà.`);
+      } else {
+        toast(`${crees} matière${crees > 1 ? 's créées' : ' créée'} : ${noms.join(', ')}`, 'ok', 5000);
+      }
+    } catch (err) { toast(errMsg(err), 'err'); }
+    b.disabled = false;
+  });
+
   root.addEventListener('click', async (e) => {
     const seed = e.target.closest('[data-seed]');
     if (!seed) return;
