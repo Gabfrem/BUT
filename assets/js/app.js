@@ -3,7 +3,7 @@
 import { icon } from './icons.js';
 import { el, esc, errMsg } from './ui.js';
 import { isConfigured, currentUser, onAuthChange } from './supa.js';
-import { bootstrap, prefs } from './state.js';
+import { state, bootstrap, prefs } from './state.js';
 import { renderSetup, renderLogin } from './views/auth.js';
 import { appliquerTheme } from './views/settings.js';
 
@@ -156,6 +156,28 @@ async function demarrer() {
 
   await afficher();
   enregistrerServiceWorker();
+  rafraichirEdt();
+}
+
+/**
+ * Rafraîchit l'emploi du temps en arrière-plan si le cache date de plus de
+ * douze heures. Silencieux : un planning inaccessible ne doit pas polluer
+ * l'écran, le bouton « Synchroniser » des réglages reste là pour le manuel.
+ */
+async function rafraichirEdt() {
+  const s = state.settings;
+  if (!s?.ics_url) return;
+  const age = s.ics_synced_at ? Date.now() - new Date(s.ics_synced_at).getTime() : Infinity;
+  if (age < 12 * 3600 * 1000) return;
+  try {
+    const { synchroniserEdt } = await import('./views/settings.js');
+    const n = await synchroniserEdt();
+    console.info(`Emploi du temps rafraîchi : ${n} cours.`);
+    const { chemin } = analyserHash();
+    if (chemin === '/' || chemin === '/edt') afficher();
+  } catch (e) {
+    console.info('Emploi du temps non rafraîchi :', e.message);
+  }
 }
 
 function enregistrerServiceWorker() {
