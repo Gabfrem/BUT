@@ -208,3 +208,107 @@ grant select on
 -- Retrouver vite les feuilles laissées en plan
 create index if not exists sheets_unfinished_idx
   on public.sheets (user_id, unfinished) where unfinished;
+
+
+-- ############################################################################
+--  DOCUMENTS DE COURS ET CODE
+--  Ajoutés après coup : ce bloc est autonome et ré-exécutable.
+--  Un chapitre devient le point de rencontre entre le cours (polycopié
+--  récupéré sur Moodle), les notes manuscrites scannées et le code écrit.
+-- ############################################################################
+
+-- -------------------------------------------------------------- DOCUMENTS --
+create table if not exists public.documents (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  subject_id    uuid references public.subjects(id) on delete set null,
+  chapter_id    uuid references public.chapters(id) on delete set null,
+  title         text not null,
+  kind          text not null default 'cours'
+                check (kind in ('cours','td','tp','corrige','sujet','autre')),
+  storage_path  text not null,                     -- '<uid>/docs/<doc_id>.<ext>'
+  mime          text,
+  bytes         int,
+  note          text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists documents_user_idx    on public.documents (user_id, created_at desc);
+create index if not exists documents_subject_idx on public.documents (subject_id, created_at desc);
+create index if not exists documents_chapter_idx on public.documents (chapter_id, created_at desc);
+
+-- ------------------------------------------------------------------- CODE --
+create table if not exists public.snippets (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  subject_id  uuid references public.subjects(id) on delete set null,
+  chapter_id  uuid references public.chapters(id) on delete set null,
+  title       text not null,
+  language    text not null default 'python',
+  content     text not null default '',
+  note        text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists snippets_user_idx    on public.snippets (user_id, updated_at desc);
+create index if not exists snippets_subject_idx on public.snippets (subject_id, updated_at desc);
+create index if not exists snippets_chapter_idx on public.snippets (chapter_id, updated_at desc);
+
+drop trigger if exists documents_touch on public.documents;
+create trigger documents_touch before update on public.documents
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists snippets_touch on public.snippets;
+create trigger snippets_touch before update on public.snippets
+  for each row execute function public.touch_updated_at();
+
+-- ------------------------------------------------------------------- RLS --
+alter table public.documents enable row level security;
+alter table public.snippets  enable row level security;
+
+do $rls2$
+declare t text;
+begin
+  foreach t in array array['documents','snippets'] loop
+    execute format('drop policy if exists "own_select" on public.%I', t);
+    execute format('drop policy if exists "own_insert" on public.%I', t);
+    execute format('drop policy if exists "own_update" on public.%I', t);
+    execute format('drop policy if exists "own_delete" on public.%I', t);
+    execute format('create policy "own_select" on public.%I for select using (user_id = auth.uid())', t);
+    execute format('create policy "own_insert" on public.%I for insert with check (user_id = auth.uid())', t);
+    execute format('create policy "own_update" on public.%I for update using (user_id = auth.uid()) with check (user_id = auth.uid())', t);
+    execute format('create policy "own_delete" on public.%I for delete using (user_id = auth.uid())', t);
+  end loop;
+end
+$rls2$;
+
+grant select, insert, update, delete on public.documents, public.snippets to authenticated;
+
+-- ------------------------------------------------------------------ VUES --
+drop view if exists public.document_overview;
+create view public.document_overview
+with (security_invoker = true) as
+select
+  d.*,
+  sub.name  as subject_name,
+  sub.code  as subject_code,
+  sub.color as subject_color,
+  ch.name   as chapter_name
+from public.documents d
+left join public.subjects sub on sub.id = d.subject_id
+left join public.chapters ch  on ch.id  = d.chapter_id;
+
+drop view if exists public.snippet_overview;
+create view public.snippet_overview
+with (security_invoker = true) as
+select
+  s.*,
+  sub.name  as subject_name,
+  sub.code  as subject_code,
+  sub.color as subject_color,
+  ch.name   as chapter_name
+from public.snippets s
+left join public.subjects sub on sub.id = s.subject_id
+left join public.chapters ch  on ch.id  = s.chapter_id;
+
+grant select on public.document_overview, public.snippet_overview to authenticated;

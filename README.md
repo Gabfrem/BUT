@@ -9,7 +9,7 @@ retrouver rangées par matière et par chapitre, depuis l'IUT comme depuis chez 
   Si un cours est en train d'avoir lieu d'après l'emploi du temps, la matière est
   déjà pré-sélectionnée. Un chapitre peut être créé sans quitter la pop-up.
 - **Retrouver** — accueil avec l'emploi du temps du jour et les derniers scans ;
-  navigation matière → chapitre → feuille ; recherche par titre, mot-clé,
+  navigation matière → chapitre → cours, notes et code ; recherche par titre, mot-clé,
   matière ou chapitre ; favoris ; bac « à ranger » pour ce qui a été scanné vite fait.
 - **Partout** — site statique hébergé sur GitHub Pages, données dans ton propre
   projet Supabase, installable comme une application sur le téléphone.
@@ -175,10 +175,35 @@ pré-sélectionner la bonne matière au moment du scan.
 | Signaler une feuille inachevée | case « pas terminée » au rangement, ou bouton **À terminer** |
 | Ce qui traîne | **Matières → À ranger** et **À terminer** |
 | Lire une feuille en texte | bouton **Texte** sur la fiche, ou au survol d'une vignette |
+| Ajouter un poly Moodle | fiche matière → **Cours → Ajouter** |
+| Enregistrer du code | fiche matière → **Code → Nouveau** |
 
 Les filtres de scan : **Document** (par défaut, noir et blanc contrasté, idéal
 pour du manuscrit), **Niveaux de gris**, **Couleur** (pour un schéma au
 surligneur), **Photo brute**.
+
+
+### Un chapitre, trois matières premières
+
+La page d'une matière regroupe, pour le chapitre sélectionné :
+
+- **Cours** — les polycopiés, sujets de TD et corrigés récupérés sur Moodle.
+  Bouton *Ajouter*, classement par type (cours / TD / TP / sujet / corrigé),
+  ouverture dans un nouvel onglet via une URL signée.
+- **Mes feuilles** — les notes manuscrites scannées.
+- **Code** — les bouts de code écrits en TP. Onze langages, la touche Tab
+  indente au lieu de sortir du champ, affichage avec numéros de ligne et
+  bouton copier.
+
+C'est ce qui permet de savoir d'un coup d'œil quel chapitre correspond à quel
+cours, à quelles notes et à quel code.
+
+### Ce qu'il te faut aujourd'hui
+
+L'accueil affiche une section **« Pour tes cours d'aujourd'hui »** : les
+matières présentes dans l'emploi du temps du jour, chacune avec ses dernières
+feuilles. Après 19 h, la section bascule sur **demain** — à cette heure-là, les
+cours du jour sont finis et ce qu'on prépare, c'est le lendemain.
 
 ### Transcription en texte
 

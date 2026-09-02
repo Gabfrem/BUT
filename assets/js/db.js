@@ -67,6 +67,7 @@ const SHEET_COLS = '*';
 export async function listSheets(f = {}) {
   let q = sb().from('sheet_overview').select(SHEET_COLS);
   if (f.subjectId)  q = q.eq('subject_id', f.subjectId);
+  if (f.subjectIds?.length) q = q.in('subject_id', f.subjectIds);
   if (f.chapterId)  q = q.eq('chapter_id', f.chapterId);
   if (f.noChapter)  q = q.is('chapter_id', null);
   if (f.unfiled)    q = q.is('subject_id', null);
@@ -198,4 +199,72 @@ export async function saveSettings(userId, patch) {
   return unwrap(await sb().from('settings')
     .upsert({ user_id: userId, ...patch }, { onConflict: 'user_id' })
     .select().single());
+}
+
+/* ======================================================================== */
+/*  DOCUMENTS DE COURS (polycopiés, sujets de TD, corrigés…)                */
+/* ======================================================================== */
+
+export async function listDocuments(f = {}) {
+  let q = sb().from('document_overview').select('*');
+  if (f.subjectId) q = q.eq('subject_id', f.subjectId);
+  if (f.chapterId) q = q.eq('chapter_id', f.chapterId);
+  if (f.noChapter) q = q.is('chapter_id', null);
+  q = q.order('created_at', { ascending: false });
+  if (f.limit) q = q.limit(f.limit);
+  return unwrap(await q);
+}
+
+export async function createDocument(data) {
+  return unwrap(await sb().from('documents').insert(data).select().single());
+}
+
+export async function updateDocument(id, patch) {
+  return unwrap(await sb().from('documents').update(patch).eq('id', id).select().single());
+}
+
+/** Supprime la fiche et le fichier associé. */
+export async function deleteDocument(doc) {
+  if (doc.storage_path) {
+    const { error } = await sb().storage.from(BUCKET).remove([doc.storage_path]);
+    if (error) console.warn('Fichier non supprimé :', error.message);
+  }
+  unwrap(await sb().from('documents').delete().eq('id', doc.id));
+}
+
+/** Envoie un fichier de cours ; renvoie son chemin de stockage. */
+export async function uploadDocument(userId, file) {
+  const ext = (file.name.match(/\.([a-z0-9]{1,8})$/i)?.[1] || 'bin').toLowerCase();
+  const id = (crypto.randomUUID?.() || String(Date.now()));
+  const path = `${userId}/docs/${id}.${ext}`;
+  const { error } = await sb().storage.from(BUCKET)
+    .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
+/* ======================================================================== */
+/*  CODE                                                                    */
+/* ======================================================================== */
+
+export async function listSnippets(f = {}) {
+  let q = sb().from('snippet_overview').select('*');
+  if (f.subjectId) q = q.eq('subject_id', f.subjectId);
+  if (f.chapterId) q = q.eq('chapter_id', f.chapterId);
+  if (f.noChapter) q = q.is('chapter_id', null);
+  q = q.order('updated_at', { ascending: false });
+  if (f.limit) q = q.limit(f.limit);
+  return unwrap(await q);
+}
+
+export async function createSnippet(data) {
+  return unwrap(await sb().from('snippets').insert(data).select().single());
+}
+
+export async function updateSnippet(id, patch) {
+  return unwrap(await sb().from('snippets').update(patch).eq('id', id).select().single());
+}
+
+export async function deleteSnippet(id) {
+  unwrap(await sb().from('snippets').delete().eq('id', id));
 }
