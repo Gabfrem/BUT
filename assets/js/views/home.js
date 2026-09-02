@@ -2,7 +2,7 @@
  * les derniers scans et ce qui reste à ranger. */
 
 import { icon } from '../icons.js';
-import { el, esc, dateLong, hhmm, toDay, colorFor, errMsg, toast } from '../ui.js';
+import { el, esc, dateLong, hhmm, toDay, colorFor, subjectBadge, errMsg, toast } from '../ui.js';
 import * as db from '../db.js';
 import { state } from '../state.js';
 import { eventsOfDay, matchSubject, sessionType, eventLabel, couverture } from '../ics.js';
@@ -127,6 +127,73 @@ export async function render() {
           ${icon('sun')} Aucun cours aujourd'hui.
         </div>
       </div>`));
+  }
+
+  /* ------------------------------- ce qu'il te faut pour la journée visée */
+  // Après 19 h on bascule sur le lendemain : à cette heure-là, les cours du
+  // jour sont finis et ce qu'on cherche, c'est ce qu'il faut pour demain.
+  const apres19h = now.getHours() >= 19;
+  const demain = new Date(now);
+  demain.setDate(demain.getDate() + 1);
+  const jourCible = apres19h ? toDay(demain) : today;
+  const evsCible = apres19h ? eventsOfDay(state.events, jourCible) : events;
+
+  const matieresDuJour = [...new Map(
+    evsCible
+      .map((ev) => matchSubject(ev.summary, state.subjects))
+      .filter(Boolean)
+      .map((s) => [s.id, s])
+  ).values()];
+
+  if (matieresDuJour.length) {
+    const sec = el(`
+      <div class="section">
+        <div class="section-head">
+          <h2>Pour tes cours ${apres19h ? 'de demain' : "d'aujourd'hui"}</h2>
+          <span class="chip">${matieresDuJour.length} matière${matieresDuJour.length > 1 ? 's' : ''}</span>
+        </div>
+        <div data-slot><div class="skeleton" style="height:130px"></div></div>
+      </div>`);
+    root.appendChild(sec);
+
+    (async () => {
+      const slot = sec.querySelector('[data-slot]');
+      try {
+        const feuilles = await db.listSheets({
+          subjectIds: matieresDuJour.map((s) => s.id), limit: 80
+        });
+        const parMatiere = new Map();
+        feuilles.forEach((f) => {
+          if (!parMatiere.has(f.subject_id)) parMatiere.set(f.subject_id, []);
+          const lot = parMatiere.get(f.subject_id);
+          if (lot.length < 8) lot.push(f);          // les plus récentes suffisent
+        });
+
+        slot.innerHTML = '';
+        matieresDuJour.forEach((m) => {
+          const lot = parMatiere.get(m.id) || [];
+          const bloc = el(`
+            <div style="margin-bottom:18px">
+              <a class="row-item" href="#/matiere/${esc(m.id)}" style="margin-bottom:8px">
+                <span class="swatch" style="background:${esc(m.color || colorFor(m.name))}">
+                  ${esc(subjectBadge(m))}</span>
+                <span class="grow">
+                  <span class="ttl">${esc(m.name)}</span>
+                  <span class="sub">${lot.length
+                    ? `${lot.length} feuille${lot.length > 1 ? 's' : ''}`
+                    : 'aucune feuille pour l’instant'}</span>
+                </span>
+                <span class="chev">${icon('chevronR')}</span>
+              </a>
+            </div>`);
+          if (lot.length) bloc.appendChild(sheetGrid(lot, { horizontal: true }));
+          slot.appendChild(bloc);
+        });
+      } catch (e) {
+        slot.innerHTML = `<div class="banner">${icon('alert')}
+          <div class="grow">${esc(errMsg(e))}</div></div>`;
+      }
+    })();
   }
 
   /* -------------------------------------------------------- derniers scans */

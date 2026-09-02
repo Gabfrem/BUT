@@ -1,4 +1,6 @@
-/* Fiche d'une matière : ses chapitres et ses feuilles. */
+/* Fiche d'une matière : ses chapitres, et pour le chapitre choisi les trois
+ * matières premières du suivi — le cours (documents), les notes scannées et
+ * le code. */
 
 import { icon } from '../icons.js';
 import { el, esc, toast, errMsg, colorFor, subjectBadge, confirmDialog, promptDialog,
@@ -6,6 +8,8 @@ import { el, esc, toast, errMsg, colorFor, subjectBadge, confirmDialog, promptDi
 import * as db from '../db.js';
 import { chaptersFor, invalidateChapters, refreshSubjects, subjectById } from '../state.js';
 import { sheetGrid, emptyState, openSubjectEditor } from '../components.js';
+import { documentRowHtml, ouvrirDocument, openDocumentUploader, openDocumentEditor } from '../documents.js';
+import { snippetRowHtml, openSnippetViewer, openSnippetEditor } from '../snippets.js';
 
 export async function render(params) {
   const id = params.id;
@@ -39,8 +43,31 @@ export async function render(params) {
         <button class="icon-btn" data-del title="Supprimer">${icon('trash')}</button>
       </div>
 
-      <div class="filters" data-chapters style="margin-bottom:14px"></div>
-      <div data-grid></div>
+      <div class="filters" data-chapters style="margin-bottom:18px"></div>
+
+      <div class="mat-section">
+        <div class="section-head">
+          <h2>Cours</h2>
+          <button class="btn sm" data-add-doc>${icon('upload')}<span>Ajouter</span></button>
+        </div>
+        <div data-docs></div>
+      </div>
+
+      <div class="mat-section">
+        <div class="section-head">
+          <h2>Mes feuilles</h2>
+          <button class="btn sm" data-add-sheet>${icon('camera')}<span>Scanner</span></button>
+        </div>
+        <div data-grid></div>
+      </div>
+
+      <div class="mat-section">
+        <div class="section-head">
+          <h2>Code</h2>
+          <button class="btn sm" data-add-code>${icon('plus')}<span>Nouveau</span></button>
+        </div>
+        <div data-code></div>
+      </div>
     </div>`);
 
   /* -------------------------------------------------------- édition matière */
@@ -52,8 +79,8 @@ export async function render(params) {
   root.querySelector('[data-del]').addEventListener('click', async () => {
     const ok = await confirmDialog({
       title: 'Supprimer la matière ?',
-      message: `« ${sujet.name} » et ses chapitres seront supprimés. Les feuilles scannées, elles, `
-             + `sont conservées : elles repasseront dans « À ranger ».`,
+      message: `« ${sujet.name} » et ses chapitres seront supprimés. Les feuilles, documents `
+             + `et codes sont conservés, mais perdront leur rattachement.`,
       confirmLabel: 'Supprimer', danger: true
     });
     if (!ok) return;
@@ -74,9 +101,8 @@ export async function render(params) {
     barre.innerHTML =
       `<button data-c="tout" class="${filtreChapitre === 'tout' ? 'on' : ''}">Tout</button>` +
       chapitres.map((c) => `<button data-c="${esc(c.id)}"
-        class="${filtreChapitre === c.id ? 'on' : ''}">${esc(c.name)}
-        <span style="opacity:.6">${c.sheet_count || 0}</span></button>`).join('') +
-      `<button data-c="sans" class="${filtreChapitre === 'sans' ? 'on' : ''}">Sans chapitre</button>` +
+        class="${filtreChapitre === c.id ? 'on' : ''}">${esc(c.name)}</button>`).join('') +
+      `<button data-c="sans" class="${filtreChapitre === 'sans' ? 'on' : ''}">Hors chapitre</button>` +
       `<button data-new-chapter title="Nouveau chapitre">${icon('plus')}</button>` +
       (chapitres.length ? `<button data-manage title="Gérer les chapitres">${icon('settings')}</button>` : '');
   }
@@ -101,7 +127,7 @@ export async function render(params) {
     if (!b) return;
     filtreChapitre = b.dataset.c;
     drawChapters();
-    charger();
+    chargerTout();
   });
 
   /* ----------------------------------------------- gestion des chapitres  */
@@ -137,8 +163,7 @@ export async function render(params) {
       } else if (e.target.closest('[data-sup]')) {
         const ok = await confirmDialog({
           title: 'Supprimer le chapitre ?',
-          message: `Les ${c.sheet_count || 0} feuille(s) de « ${c.name} » restent dans la matière, `
-                 + `mais sans chapitre.`,
+          message: `Le contenu de « ${c.name} » reste dans la matière, mais sans chapitre.`,
           confirmLabel: 'Supprimer', danger: true
         });
         if (!ok) return;
@@ -148,7 +173,7 @@ export async function render(params) {
           if (filtreChapitre === c.id) filtreChapitre = 'tout';
           await drawChapters();
           dessine();
-          charger();
+          chargerTout();
           toast('Chapitre supprimé');
         } catch (err) { toast(errMsg(err), 'err'); }
       }
@@ -157,25 +182,88 @@ export async function render(params) {
     openModal({ title: 'Chapitres', body, actions: [{ label: 'Fermer', onClick: ({ close }) => close() }] });
   }
 
-  /* -------------------------------------------------------------- feuilles */
+  /* --------------------------------------------- filtre commun aux sections */
+  function filtre() {
+    const f = { subjectId: sujet.id };
+    if (filtreChapitre === 'sans') f.noChapter = true;
+    else if (filtreChapitre !== 'tout') f.chapterId = filtreChapitre;
+    return f;
+  }
+  const chapitreCourant = () => (filtreChapitre === 'tout' || filtreChapitre === 'sans'
+    ? null : filtreChapitre);
+
+  /* ------------------------------------------------------- 1. LES COURS   */
+  const zoneDocs = root.querySelector('[data-docs]');
+  let documents = [];
+
+  root.querySelector('[data-add-doc]').addEventListener('click', () => {
+    openDocumentUploader({
+      subjectId: sujet.id, chapterId: chapitreCourant(), onDone: () => chargerDocs()
+    });
+  });
+
+  zoneDocs.addEventListener('click', (e) => {
+    const edit = e.target.closest('[data-doc-edit]');
+    if (edit) {
+      e.stopPropagation();
+      const d = documents.find((x) => x.id === edit.dataset.docEdit);
+      if (d) openDocumentEditor(d, { onDone: () => chargerDocs() });
+      return;
+    }
+    const ligne = e.target.closest('[data-doc]');
+    if (!ligne) return;
+    const d = documents.find((x) => x.id === ligne.dataset.doc);
+    if (d) ouvrirDocument(d);
+  });
+
+  async function chargerDocs() {
+    zoneDocs.innerHTML = '<div class="skeleton" style="height:64px"></div>';
+    try {
+      documents = await db.listDocuments(filtre());
+      zoneDocs.innerHTML = documents.length
+        ? `<div class="list">${documents.map(documentRowHtml).join('')}</div>`
+        : '';
+      if (!documents.length) {
+        zoneDocs.appendChild(emptyState({
+          ico: 'file',
+          title: 'Aucun document',
+          text: 'Dépose ici les polycopiés, sujets de TD et corrigés récupérés sur Moodle.',
+          action: {
+            label: 'Ajouter un document', icon: 'upload',
+            onClick: () => openDocumentUploader({
+              subjectId: sujet.id, chapterId: chapitreCourant(), onDone: () => chargerDocs()
+            })
+          }
+        }));
+      }
+    } catch (e) {
+      zoneDocs.innerHTML = `<div class="banner">${icon('alert')}<div class="grow">${esc(errMsg(e))}</div></div>`;
+    }
+  }
+
+  /* ---------------------------------------------------- 2. LES FEUILLES   */
   const grid = root.querySelector('[data-grid]');
 
-  async function charger() {
-    grid.innerHTML = `<div class="sheet-grid">${'<div class="skeleton" style="height:212px"></div>'.repeat(6)}</div>`;
+  root.querySelector('[data-add-sheet]').addEventListener('click', () => {
+    location.hash = `#/scan?matiere=${sujet.id}`;
+  });
+
+  async function chargerFeuilles() {
+    grid.innerHTML = `<div class="sheet-grid">${'<div class="skeleton" style="height:212px"></div>'.repeat(3)}</div>`;
     try {
-      const f = { subjectId: sujet.id };
-      if (filtreChapitre === 'sans') f.noChapter = true;
-      else if (filtreChapitre !== 'tout') f.chapterId = filtreChapitre;
-      const feuilles = await db.listSheets(f);
+      const feuilles = await db.listSheets(filtre());
       grid.innerHTML = '';
       if (!feuilles.length) {
         grid.appendChild(emptyState({
           ico: 'camera',
-          title: 'Rien ici',
+          title: 'Aucune feuille',
           text: filtreChapitre === 'tout'
-            ? 'Aucune feuille dans cette matière pour le moment.'
+            ? 'Scanne tes notes : elles se rangeront ici.'
             : 'Aucune feuille dans cette sélection.',
-          action: { label: 'Scanner', icon: 'camera', onClick: () => { location.hash = `#/scan?matiere=${sujet.id}`; } }
+          action: {
+            label: 'Scanner', icon: 'camera',
+            onClick: () => { location.hash = `#/scan?matiere=${sujet.id}`; }
+          }
         }));
       } else {
         grid.appendChild(sheetGrid(feuilles));
@@ -185,7 +273,55 @@ export async function render(params) {
     }
   }
 
+  /* -------------------------------------------------------- 3. LE CODE    */
+  const zoneCode = root.querySelector('[data-code]');
+  let codes = [];
+
+  root.querySelector('[data-add-code]').addEventListener('click', () => {
+    openSnippetEditor(null, {
+      subjectId: sujet.id, chapterId: chapitreCourant(), onDone: () => chargerCode()
+    });
+  });
+
+  zoneCode.addEventListener('click', (e) => {
+    const ligne = e.target.closest('[data-snippet]');
+    if (!ligne) return;
+    const s = codes.find((x) => x.id === ligne.dataset.snippet);
+    if (s) openSnippetViewer(s, { onChange: () => chargerCode() });
+  });
+
+  async function chargerCode() {
+    zoneCode.innerHTML = '<div class="skeleton" style="height:64px"></div>';
+    try {
+      codes = await db.listSnippets(filtre());
+      zoneCode.innerHTML = codes.length
+        ? `<div class="list">${codes.map(snippetRowHtml).join('')}</div>`
+        : '';
+      if (!codes.length) {
+        zoneCode.appendChild(emptyState({
+          ico: 'code',
+          title: 'Aucun code',
+          text: 'Garde ici les bouts de code écrits en TP, rattachés à leur chapitre.',
+          action: {
+            label: 'Écrire du code', icon: 'plus',
+            onClick: () => openSnippetEditor(null, {
+              subjectId: sujet.id, chapterId: chapitreCourant(), onDone: () => chargerCode()
+            })
+          }
+        }));
+      }
+    } catch (e) {
+      zoneCode.innerHTML = `<div class="banner">${icon('alert')}<div class="grow">${esc(errMsg(e))}</div></div>`;
+    }
+  }
+
+  function chargerTout() {
+    chargerDocs();
+    chargerFeuilles();
+    chargerCode();
+  }
+
   await drawChapters();
-  charger();
+  chargerTout();
   return root;
 }

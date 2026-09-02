@@ -700,3 +700,37 @@ a.chip { text-decoration: none; }
 .banner .btn { flex: none; align-self: center; }
 
 @media print { .nav, .app-head { display: none; } main { padding: 0; } }
+
+/* ------------------------------------------------------------- 17. CODE   */
+.code-block {
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: var(--r); overflow: auto; max-height: 52vh;
+}
+.code-block ol {
+  margin: 0; padding: 12px 12px 12px 0; list-style: none;
+  counter-reset: ligne;
+  font-family: var(--mono); font-size: .85rem; line-height: 1.6;
+}
+.code-block li {
+  counter-increment: ligne;
+  white-space: pre; padding-left: 56px; position: relative;
+}
+.code-block li::before {
+  content: counter(ligne);
+  position: absolute; left: 0; width: 42px; text-align: right;
+  color: var(--txt-3); opacity: .65; user-select: none;
+}
+.code-block li:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+.textarea.code-input {
+  font-family: var(--mono); font-size: 14px; line-height: 1.6;
+  min-height: 34vh; white-space: pre; overflow-wrap: normal; overflow-x: auto;
+  tab-size: 4;
+}
+
+/* Sections d'une matière : cours, notes, code */
+.mat-section { margin-bottom: 24px; }
+.mat-section .section-head .btn { flex: none; }
+
+/* Le bouton « transcrire » ne doit pas chevaucher le bandeau « à terminer ». */
+.sheet-card .thumb:has(.todo) .ocr-btn { bottom: 32px; }
